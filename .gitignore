@@ -1,0 +1,11 @@
+.vs/
+**/bin/
+**/obj/
+.nuget/
+nuget-cache/
+.android-build-tmp/
+.android-temp/
+android-download/
+*.apk
+*.log
+*.csproj.user

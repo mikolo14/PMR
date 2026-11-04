@@ -1,0 +1,5 @@
+[functions.username-signin]
+# The function is a public login endpoint and accepts only the project's publishable
+# API key plus username/password. It performs its own input checks and keeps the
+# service-role key on the server only.
+verify_jwt = false

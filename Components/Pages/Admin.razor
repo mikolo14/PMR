@@ -1,0 +1,150 @@
+@page "/admin"
+@inject PIMP_MY_RIDE.Services.SupabaseGymService Backend
+@inject NavigationManager Navigation
+@using System.Globalization
+@using ZXing.Net.Maui
+
+@if (isLoading){<div class="admin-loading"><span class="brand-mark"><img src="/images/pmr-mark.svg" alt="" /></span><p>Opening the admin workspace…</p></div>} else if (!isAdmin){<div class="admin-access-message"><span class="brand-mark"><img src="/images/pmr-mark.svg" alt="" /></span><h1>Admin sign-in required</h1><p>Sign in with an administrator account to view gym records.</p><a href="/">Go to member sign in</a></div>} else {
+<div class="admin-app">
+    <aside class="admin-sidebar">
+        <a class="brand" href="/"><span class="brand-mark"><img src="/images/pmr-mark.svg" alt="" /></span><span>PMR</span></a>
+        <div class="side-caption">GYM MANAGEMENT</div>
+        <nav class="admin-side-nav">
+            <button class='@(activeTab == "Overview" ? "selected" : "")' @onclick='() => Go("Overview")'><span>⌂</span> Overview</button>
+            <button class='@(activeTab == "Members" ? "selected" : "")' @onclick='() => Go("Members")'><span>◎</span> Members <small>248</small></button>
+            <button class='@(activeTab == "Attendance" ? "selected" : "")' @onclick='() => Go("Attendance")'><span>▦</span> Attendance</button>
+            <button class='@(activeTab == "Payments" ? "selected" : "")' @onclick='() => Go("Payments")'><span>₦</span> Payments</button>
+            <button class='@(activeTab == "Plans" ? "selected" : "")' @onclick='() => Go("Plans")'><span>◈</span> Plans & pricing</button>
+        </nav>
+        <div class="admin-sidebar-spacer"></div>
+        <div class="admin-side-note"><b>PMR preview</b><span>Demo figures only. Connect Supabase to use real gym records.</span></div>
+        <div class="admin-user"><span class="admin-avatar">A</span><span><b>Gym administrator</b><small>Administrator</small></span><button class="logout" aria-label="Sign out" @onclick="SignOutAdmin">↗</button></div>
+    </aside>
+
+    <section class="admin-main">
+        <header class="admin-topbar"><div class="admin-mobile-brand"><span class="brand-mark"><img src="/images/pmr-mark.svg" alt="" /></span> PMR</div><div class="admin-crumb">Admin space <span>/</span> <b>@activeTab</b></div><div class="admin-top-actions"><span class="admin-date">@DateTime.Now.ToString("ddd, d MMM yyyy")</span><button aria-label="Notifications">♧</button><span class="admin-avatar">A</span></div></header>
+        <main class="admin-content">
+            @if(liveConnected){<div class="admin-demo-banner live"><span>✓</span><div><b>Shared database connected</b><small>Member, attendance and payment tables show live records.</small></div></div>}else{<div class="admin-demo-banner"><span>ⓘ</span><div><b>Preview data</b><small>These example figures are not saved records. Configure Supabase to use live gym data.</small></div></div>}
+            @if (activeTab == "Overview")
+            {
+                <div class="admin-welcome"><div><span class="eyebrow">GYM OVERVIEW</span><h1>Good morning, Admin</h1><p>Here’s what’s happening at your gym today.</p></div><button class="admin-date-filter">This month⌄</button></div>
+                <section class="admin-metrics"><article><span class="metric-icon green">◎</span><small>ACTIVE MEMBERS</small><b>@ActiveMemberCount</b><em>Across all membership plans</em></article><article><span class="metric-icon blue">▦</span><small>CHECKED IN TODAY</small><b>@TodayCheckinCount</b><em>Attendance scans so far</em></article><article><span class="metric-icon amber">◷</span><small>RENEWALS DUE SOON</small><b>@UpcomingRenewalCount</b><em>In the next 7 days</em></article><article><span class="metric-icon violet">₦</span><small>COLLECTED THIS MONTH</small><b>₦@MonthlyRevenue.ToString("N0")</b><em>Membership payments</em></article></section>
+                <section class="admin-overview-grid"><article class="admin-panel attendance-preview"><div class="admin-panel-head"><div><span class="eyebrow">LIVE CHECK-INS</span><h2>Today’s attendance</h2></div><button class="admin-link" @onclick='() => Go("Attendance")'>View attendance →</button></div><div class="checkin-summary"><b>@TodayCheckinCount</b><span>members checked in today</span><i></i><small>Updated just now</small></div><div class="attendance-bars"><div><span>Mon</span><i><b style="width:70%"></b></i><small>42</small></div><div><span>Tue</span><i><b style="width:88%"></b></i><small>53</small></div><div><span>Wed</span><i><b style="width:54%"></b></i><small>32</small></div><div><span>Thu</span><i><b style="width:78%"></b></i><small>47</small></div><div><span>Fri</span><i><b style="width:60%"></b></i><small>36</small></div><div><span>Sat</span><i><b style="width:94%"></b></i><small>57</small></div><div><span>Sun</span><i><b style="width:32%"></b></i><small>19</small></div></div></article>
+                    <article class="admin-panel renewals-preview"><div class="admin-panel-head"><div><span class="eyebrow">MEMBERSHIP</span><h2>Renewals coming up</h2></div><button class="admin-link" @onclick='() => Go("Members")'>See all →</button></div><div class="renewal-list"><div><span class="admin-avatar small">CK</span><span><b>Chika Okafor</b><small>Monthly plan</small></span><em>Today</em></div><div><span class="admin-avatar small blue">TA</span><span><b>Tunde Adebayo</b><small>Quarterly plan</small></span><em>Tomorrow</em></div><div><span class="admin-avatar small amber">AM</span><span><b>Adaeze Mba</b><small>Monthly plan</small></span><em>16 Oct</em></div><div><span class="admin-avatar small violet">BO</span><span><b>Bola Ogunleye</b><small>Annual plan</small></span><em>18 Oct</em></div></div><button class="admin-outline" @onclick='() => Go("Members")'>Manage members</button></article></section>
+                <article class="admin-panel recent-preview"><div class="admin-panel-head"><div><span class="eyebrow">LATEST ACTIVITY</span><h2>Recent check-ins</h2></div><button class="admin-link" @onclick='() => Go("Attendance")'>Full attendance log →</button></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>MEMBER</th><th>MEMBER ID</th><th>CHECK-IN TIME</th><th>STATUS</th></tr></thead><tbody>@foreach (var item in AttendanceRows.Take(4)){<tr><td><b>@item.Name</b></td><td>@item.MemberId</td><td>@item.Time</td><td><span class="admin-status success">Checked in</span></td></tr>}</tbody></table></div></article>
+            }
+            else if (activeTab == "Members")
+            {
+                <div class="admin-welcome"><div><span class="eyebrow">MEMBER DIRECTORY</span><h1>Members</h1><p>@(liveConnected ? "Live records from your shared database." : "Example records while Supabase is being configured.")</p></div><button class="admin-primary" @onclick="ShowDemoMessage">＋ Add member</button></div>
+                <article class="admin-panel directory-panel"><div class="directory-tools"><input placeholder="Search name, phone or member ID" @bind="memberSearch" @bind:event="oninput" /><select aria-label="Membership status"><option>All statuses</option><option>Active</option><option>Expired</option></select><select aria-label="Membership plan"><option>All plans</option><option>Monthly</option><option>Quarterly</option><option>Annual</option></select></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>MEMBER</th><th>PHONE</th><th>PLAN</th><th>STATUS</th><th>RENEWAL</th></tr></thead><tbody>@foreach (var m in MemberRows.Where(m => string.IsNullOrWhiteSpace(memberSearch) || (m.Name + m.Phone + m.MemberId).Contains(memberSearch, StringComparison.OrdinalIgnoreCase))){<tr><td><span class="member-cell"><span class="admin-avatar small">@m.Initials</span><span><b>@m.Name</b><small>@m.MemberId</small></span></span></td><td>@m.Phone</td><td>@m.Plan</td><td><span class="admin-status @(m.Status == "Active" ? "success" : "")">@m.Status</span></td><td>@m.Renewal</td></tr>}</tbody></table></div></article>
+            }
+            else if (activeTab == "Attendance")
+            {
+                <div class="admin-welcome"><div><span class="eyebrow">VISIT HISTORY</span><h1>Attendance</h1><p>@(liveConnected ? "Live attendance records from your gym." : "Example check-ins while Supabase is being configured.")</p></div><button class="admin-primary" @onclick="GenerateCheckinQr">▦ Display gym QR</button></div>
+                <section class="admin-metrics attendance-metrics"><article><span class="metric-icon blue">▦</span><small>CHECK-INS TODAY</small><b>@TodayCheckinCount</b><em>Example for preview</em></article><article><span class="metric-icon green">◎</span><small>UNIQUE VISITORS</small><b>31</b><em>5 repeat visits today</em></article><article><span class="metric-icon amber">◷</span><small>BUSIEST HOUR</small><b>6–7 PM</b><em>Most visits this week</em></article></section>
+                @if (!string.IsNullOrWhiteSpace(qrImage)){<article class="admin-panel qr-display"><div><span class="eyebrow">MEMBER CHECK-IN</span><h2>Scan this code at the gym</h2><p>For security, it expires after two minutes.</p><small>Expires @qrExpiresAt.ToLocalTime().ToString("h:mm tt")</small></div><img alt="Short-lived gym attendance QR code" src="data:image/png;base64,@qrImage" /></article>}<article class="admin-panel directory-panel"><div class="directory-tools"><input placeholder="Search member or ID" @bind="memberSearch" @bind:event="oninput" /><input type="date" aria-label="Attendance date" value="@DateTime.Today.ToString("yyyy-MM-dd")" /></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>MEMBER</th><th>MEMBER ID</th><th>DATE</th><th>CHECK-IN TIME</th><th>METHOD</th></tr></thead><tbody>@foreach (var item in AttendanceRows.Where(a => string.IsNullOrWhiteSpace(memberSearch) || (a.Name + a.MemberId).Contains(memberSearch, StringComparison.OrdinalIgnoreCase))){<tr><td><b>@item.Name</b></td><td>@item.MemberId</td><td>@item.Date</td><td>@item.Time</td><td><span class="method-tag">▦ QR scan</span></td></tr>}</tbody></table></div></article>
+            }
+            else if (activeTab == "Payments")
+            {
+                <div class="admin-welcome"><div><span class="eyebrow">REVENUE RECORDS</span><h1>Payments</h1><p>@(liveConnected ? "Live payment records from your gym." : "Example payments while Supabase is being configured.")</p></div><button class="admin-primary" @onclick="ShowDemoMessage">＋ Record payment</button></div>
+                <section class="admin-metrics"><article><span class="metric-icon violet">₦</span><small>COLLECTED THIS MONTH</small><b>₦@MonthlyRevenue.ToString("N0")</b><em>Example for preview</em></article><article><span class="metric-icon green">✓</span><small>SUCCESSFUL PAYMENTS</small><b>86</b><em>This month</em></article><article><span class="metric-icon amber">◷</span><small>AWAITING RENEWAL</small><b>@UpcomingRenewalCount</b><em>Members to follow up</em></article></section>
+                <article class="admin-panel directory-panel"><div class="directory-tools"><input placeholder="Search member, ID or reference" @bind="memberSearch" @bind:event="oninput" /><select><option>All payment methods</option><option>Paystack</option><option>Manual</option></select></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>MEMBER</th><th>PLAN</th><th>AMOUNT</th><th>METHOD</th><th>DATE</th><th>STATUS</th></tr></thead><tbody>@foreach (var p in PaymentRows.Where(p => string.IsNullOrWhiteSpace(memberSearch) || (p.Member + p.Reference).Contains(memberSearch, StringComparison.OrdinalIgnoreCase))){<tr><td><b>@p.Member</b></td><td>@p.Plan</td><td><b>@p.Amount</b></td><td>@p.Method</td><td>@p.Date</td><td><span class="admin-status @(p.Status == "successful" ? "success" : "")">@p.Status</span></td></tr>}</tbody></table></div></article>
+            }
+            else
+            {
+                <div class="admin-welcome"><div><span class="eyebrow">MEMBERSHIP OPTIONS</span><h1>Plans & pricing</h1><p>Set the plan prices that members pay at their next renewal.</p></div><button class="admin-primary" @onclick="ShowDemoMessage">Save changes</button></div><section class="admin-plan-grid"><article class="admin-panel plan-admin"><span class="metric-icon green">◷</span><small>1 MONTH</small><h2>Monthly</h2><p>Flexible access, renewed monthly.</p><label>Price in Naira<input value="₦25,000" /></label><span class="admin-status success">Available</span></article><article class="admin-panel plan-admin"><span class="metric-icon amber">◈</span><small>3 MONTHS</small><h2>Quarterly</h2><p>Three months of uninterrupted training.</p><label>Price in Naira<input value="₦65,000" /></label><span class="admin-status success">Available</span></article><article class="admin-panel plan-admin"><span class="metric-icon blue">✳</span><small>12 MONTHS</small><h2>Annual</h2><p>A full year to build a routine.</p><label>Price in Naira<input value="₦240,000" /></label><span class="admin-status success">Available</span></article></section>
+            }
+            <footer class="admin-footer">PMR Admin Preview <span>Example data only · Connect Supabase for live records</span></footer>
+        </main>
+        <nav class="admin-mobile-nav"><button @onclick='() => Go("Overview")'>⌂<small>Home</small></button><button @onclick='() => Go("Members")'>◎<small>Members</small></button><button @onclick='() => Go("Attendance")'>▦<small>Visits</small></button><button @onclick='() => Go("Payments")'>₦<small>Payments</small></button><button @onclick='() => Go("Plans")'>◈<small>Plans</small></button></nav>
+    </section>
+    @if(!string.IsNullOrWhiteSpace(message)){<div class="toast" role="status">ⓘ @message <button class="toast-close" aria-label="Dismiss" @onclick="() => message = null">×</button></div>}
+</div>
+
+}
+@code {
+    private bool isLoading = true;
+    private bool isAdmin;
+    private bool liveConnected;
+    private string? connectionError;
+    private IReadOnlyList<PIMP_MY_RIDE.Services.MemberProfile> liveMembers = [];
+    private IReadOnlyList<PIMP_MY_RIDE.Services.AttendanceRecord> liveAttendance = [];
+    private IReadOnlyList<PIMP_MY_RIDE.Services.PaymentRecord> livePayments = [];
+    private string? qrImage;
+    private DateTimeOffset qrExpiresAt;
+    private string activeTab = "Overview";
+    private string memberSearch = "";
+    private string? message;
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var member = await Backend.GetCurrentMemberAsync();
+            if (member?.Role == "admin" )
+            {
+                isAdmin = true;
+                liveMembers = await Backend.GetMembersAsync();
+                liveAttendance = await Backend.GetAttendanceAsync();
+                livePayments = await Backend.GetPaymentsAsync();
+                liveConnected = true;
+            }
+            else Navigation.NavigateTo("/" );
+        }
+        catch (Exception ex) { connectionError = ex.Message; if (!isAdmin) Navigation.NavigateTo("/" ); }
+        finally { isLoading = false; }
+    }
+
+    private int ActiveMemberCount => liveConnected ? liveMembers.Count(m => m.MembershipEndsOn is DateOnly end && end >= DateOnly.FromDateTime(DateTime.Now)) : 248;
+    private int TodayCheckinCount => liveConnected ? liveAttendance.Count(a => a.CheckinDate == DateOnly.FromDateTime(DateTime.Now)) : 36;
+    private int UpcomingRenewalCount => liveConnected ? liveMembers.Count(m => m.MembershipEndsOn is DateOnly end && end >= DateOnly.FromDateTime(DateTime.Now) && end <= DateOnly.FromDateTime(DateTime.Now.AddDays(7))) : 12;
+    private int MonthlyRevenue => liveConnected ? livePayments.Where(p => p.Status == "successful" && p.CreatedAt.ToLocalTime().Month == DateTime.Now.Month && p.CreatedAt.ToLocalTime().Year == DateTime.Now.Year).Sum(p => p.AmountNgn) : 1240000;
+    private static string Initials(string? name) => string.Concat((name ?? "Member").Split(" "[0], StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => char.ToUpperInvariant(part[0])));
+    private IEnumerable<AdminMemberRow> MemberRows => liveConnected ? liveMembers.Select(m => new AdminMemberRow(m.FullName, Initials(m.FullName), m.MemberCode, m.Phone, m.Plan?.Name ?? "—", m.MembershipEndsOn is DateOnly end && end >= DateOnly.FromDateTime(DateTime.Now) ? "Active" : "Inactive", m.MembershipEndsOn?.ToString("d MMM yyyy") ?? "—")) : demoMembers.Select(m => new AdminMemberRow(m.Name, m.Initials, m.MemberId, m.Phone, m.Plan, "Active", m.Renewal));
+    private IEnumerable<AdminAttendanceRow> AttendanceRows => liveConnected ? liveAttendance.Select(a => new AdminAttendanceRow(a.Member?.FullName ?? "Member", a.Member?.MemberCode ?? "—", a.CheckinDate.ToString("d MMM yyyy"), a.CheckedInAt.ToLocalTime().ToString("h:mm tt"))) : demoAttendance.Select(a => new AdminAttendanceRow(a.Name, a.MemberId, "14 Oct 2026", a.Time));
+    private IEnumerable<AdminPaymentRow> PaymentRows => liveConnected ? livePayments.Select(p => new AdminPaymentRow(p.Member?.FullName ?? "Member", p.Plan?.Name ?? "—", "₦" + p.AmountNgn.ToString("N0"), p.Method, p.CreatedAt.ToLocalTime().ToString("d MMM yyyy"), p.Status, p.Reference ?? "—")) : demoPayments.Select(p => new AdminPaymentRow(p.Member, p.Plan, p.Amount, p.Method, p.Date, "Successful", p.Reference));
+    private async Task GenerateCheckinQr()
+    {
+        try
+        {
+            var token = await Backend.GenerateGymCheckinQrAsync();
+            await using var stream = new MemoryStream();
+            await BarcodeGenerator.WriteToStreamAsync(token, stream, imageOptions: new BarcodeImageOptions { Format = BarcodeImageFormat.Png });
+            qrImage = Convert.ToBase64String(stream.ToArray());
+            qrExpiresAt = DateTimeOffset.Now.AddMinutes(2);
+            message = "Check-in QR code created. It expires after two minutes.";
+        }
+        catch (Exception ex) { message = ex.Message; }
+    }
+    private async Task Go(string tab) { activeTab = tab; if (liveConnected) { try { liveMembers = await Backend.GetMembersAsync(); liveAttendance = await Backend.GetAttendanceAsync(); livePayments = await Backend.GetPaymentsAsync(); } catch (Exception ex) { connectionError = ex.Message; liveConnected = false; } } }
+    private async Task SignOutAdmin() { try { await Backend.SignOutAsync(); } catch { } Navigation.NavigateTo("/"); }
+    private void ShowDemoMessage() => message = "This action will be connected to your Supabase project.";
+    private readonly List<DemoMember> demoMembers = new()
+    {
+        new("Chika Okafor", "CK", "LD-0184", "+234 803 123 4567", "Monthly", "14 Oct 2026"),
+        new("Tunde Adebayo", "TA", "LD-0179", "+234 806 234 5678", "Quarterly", "15 Oct 2026"),
+        new("Adaeze Mba", "AM", "LD-0163", "+234 809 345 6789", "Monthly", "16 Oct 2026"),
+        new("Bola Ogunleye", "BO", "LD-0142", "+234 802 456 7890", "Annual", "18 Oct 2026"),
+        new("Emeka Nwosu", "EN", "LD-0137", "+234 805 567 8901", "Quarterly", "22 Oct 2026")
+    };
+    private readonly List<DemoAttendance> demoAttendance = new()
+    {
+        new("Chika Okafor", "LD-0184", "7:42 AM"),
+        new("Tunde Adebayo", "LD-0179", "8:16 AM"),
+        new("Adaeze Mba", "LD-0163", "9:03 AM"),
+        new("Emeka Nwosu", "LD-0137", "9:27 AM"),
+        new("Bola Ogunleye", "LD-0142", "10:14 AM")
+    };
+    private readonly List<DemoPayment> demoPayments = new()
+    {
+        new("Chika Okafor", "Monthly", "₦25,000", "Paystack", "14 Oct 2026", "PSK-***1842"),
+        new("Tunde Adebayo", "Quarterly", "₦65,000", "Manual", "13 Oct 2026", "MAN-***0179"),
+        new("Adaeze Mba", "Monthly", "₦25,000", "Paystack", "12 Oct 2026", "PSK-***4316"),
+        new("Bola Ogunleye", "Annual", "₦240,000", "Paystack", "11 Oct 2026", "PSK-***7590")
+    };
+    private sealed record AdminMemberRow(string Name, string Initials, string MemberId, string Phone, string Plan, string Status, string Renewal);
+    private sealed record AdminAttendanceRow(string Name, string MemberId, string Date, string Time);
+    private sealed record AdminPaymentRow(string Member, string Plan, string Amount, string Method, string Date, string Status, string Reference);
+    private sealed record DemoMember(string Name, string Initials, string MemberId, string Phone, string Plan, string Renewal);
+    private sealed record DemoAttendance(string Name, string MemberId, string Time);
+    private sealed record DemoPayment(string Member, string Plan, string Amount, string Method, string Date, string Reference);
+}
