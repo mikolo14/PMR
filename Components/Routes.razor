@@ -1,6 +1,19 @@
 ﻿<Router AppAssembly="typeof(MauiProgram).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        <ErrorBoundary>
+            <ChildContent>
+                <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+                <FocusOnNavigate RouteData="routeData" Selector="h1" />
+            </ChildContent>
+            <ErrorContent Context="ex">
+                <div style="padding:32px 24px;font-family:'DM Sans',sans-serif">
+                    <p style="color:#b03a2e;font-size:13px;margin:0 0 16px">Something went wrong. Please reload the app.</p>
+                    <button onclick="window.location.reload()"
+                            style="height:40px;padding:0 16px;border:0;border-radius:8px;background:#2d7a4f;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
+                        Reload
+                    </button>
+                </div>
+            </ErrorContent>
+        </ErrorBoundary>
     </Found>
 </Router>

@@ -160,3 +160,337 @@
 .profile-logout svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:740px){.profile-logout{width:calc(100% - 24px);min-height:50px;margin:4px 12px 15px;border-radius:12px;font-size:14px}}
 @media(prefers-reduced-motion:reduce){.profile-logout{transition:none}}
+
+
+/* ── Full-screen auth (Sign In & Sign Up pages) ──────────────────── */
+.auth-solo {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+/* Dark green header band */
+.auth-solo-header {
+    background: linear-gradient(135deg, #102f22 0%, #183f2c 100%);
+    padding: 48px 28px 52px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.auth-solo-header .auth-orb {
+    position: absolute;
+    border: 1px solid #ffffff0d;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.auth-solo-header .orb-a {
+    width: 380px;
+    height: 380px;
+    right: -160px;
+    top: -80px;
+}
+
+.auth-solo-header .orb-b {
+    width: 260px;
+    height: 260px;
+    left: -100px;
+    bottom: -100px;
+}
+
+.auth-solo-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font: 800 22px Manrope, sans-serif;
+    letter-spacing: -0.8px;
+    color: #fff;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-solo-brand .brand-mark {
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+}
+
+.auth-solo-brand .brand-mark img {
+    width: 22px;
+    height: 22px;
+}
+
+.auth-solo-tagline {
+    position: relative;
+    z-index: 1;
+}
+
+.auth-solo-tagline .eyebrow {
+    color: #8ec9a2;
+    font-size: 9px;
+    letter-spacing: 1.4px;
+}
+
+.auth-solo-tagline h1 {
+    font: 700 30px Manrope, sans-serif;
+    letter-spacing: -1px;
+    color: #fff;
+    margin: 8px 0 6px;
+    line-height: 1.1;
+}
+
+.auth-solo-tagline p {
+    font-size: 12px;
+    color: #b8d4c0;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* White content area — fills remaining screen */
+.auth-solo-body {
+    flex: 1;
+    background: #fff;
+    padding: 32px 24px 40px;
+    display: flex;
+    flex-direction: column;
+}
+
+.auth-solo-body .auth-form {
+    display: grid;
+    gap: 13px;
+}
+
+.auth-solo-body .auth-form label {
+    display: grid;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #3a4e3d;
+}
+
+.auth-solo-body .auth-form input {
+    height: 48px;
+    width: 100%;
+    border: 1px solid #d8e4d8;
+    border-radius: 10px;
+    background: #f7faf7;
+    padding: 0 14px;
+    color: #2c3e2f;
+    font-size: 14px;
+    outline: 0;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.auth-solo-body .auth-form input:focus {
+    border-color: #5aaa76;
+    background: #fff;
+    box-shadow: 0 0 0 3px #e6f4ea;
+}
+
+.auth-solo-body .auth-form input::placeholder {
+    color: #b0bdb0;
+    font-size: 13px;
+}
+
+.auth-solo-body .form-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: -2px;
+}
+
+.auth-solo-body .form-between small {
+    font-size: 10px;
+    color: #9aaa99;
+}
+
+.auth-solo-body .form-between button,
+.auth-solo-body .auth-switch button {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: #2e7149;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.auth-solo-body .primary-button.wide {
+    width: 100%;
+    height: 50px;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 12px;
+    margin-top: 6px;
+    background: #2d7a4f;
+    gap: 10px;
+}
+
+.auth-solo-body .primary-button.wide:hover {
+    background: #245f3e;
+}
+
+.auth-solo-body .primary-button.wide span {
+    font-size: 18px;
+}
+
+.auth-solo-body .auth-switch {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 12px;
+    color: #6e7e6f;
+}
+
+.auth-solo-body .auth-switch button {
+    margin-left: 4px;
+    font-size: 12px;
+    color: #2e7149;
+    font-weight: 700;
+}
+
+.auth-feedback {
+    background: #fef3f2;
+    border: 1px solid #f5c6c2;
+    border-radius: 8px;
+    color: #b03a2e;
+    font-size: 11px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    line-height: 1.5;
+}
+
+/* password label with eye toggle (sign in) */
+.auth-solo-body .auth-form .password-label {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #3a4e3d;
+}
+
+.auth-solo-body .auth-form .password-label input {
+    padding-right: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    bottom: 13px;
+    border: 0;
+    background: transparent;
+    color: #7a8f7c;
+    padding: 2px;
+    display: grid;
+    place-items: center;
+}
+
+.password-toggle svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* sign-up stacked fields */
+.signup-form {
+    display: grid;
+    gap: 11px;
+}
+
+.signup-field {
+    display: grid;
+    gap: 5px;
+}
+
+.signup-field label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #3a4e3d;
+}
+
+.signup-field label small {
+    color: #98a49a;
+    font-weight: 400;
+}
+
+.signup-field input {
+    height: 46px;
+    width: 100%;
+    border: 1px solid #d8e4d8;
+    border-radius: 10px;
+    background: #f7faf7;
+    padding: 0 14px;
+    color: #2c3e2f;
+    font-size: 14px;
+    outline: 0;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.signup-field input:focus {
+    border-color: #5aaa76;
+    background: #fff;
+    box-shadow: 0 0 0 3px #e6f4ea;
+}
+
+.signup-field input::placeholder {
+    color: #b0bdb0;
+    font-size: 13px;
+}
+
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 48px;
+}
+
+/* email confirmation screen */
+.confirm-icon {
+    font-size: 40px;
+    margin: 8px 0 18px;
+    color: #2d7a4f;
+}
+
+/* footer at bottom of white area */
+.auth-solo-footer {
+    text-align: center;
+    color: #b0bab0;
+    font-size: 10px;
+    margin-top: auto;
+    padding-top: 28px;
+}
+
+/* inactive pill (no active membership) */
+.inactive-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #f5c6c244;
+    background: #ffffff14;
+    border-radius: 20px;
+    padding: 5px 8px;
+    font-size: 8px;
+    letter-spacing: .55px;
+    color: #f5c6c2;
+    font-weight: 700;
+}
+
+/* form hint below signup submit */
+.form-hint {
+    font-size: 10px;
+    color: #8d978d;
+    margin: 0;
+    text-align: center;
+    line-height: 1.5;
+}
