@@ -21,7 +21,7 @@ on conflict (name) do nothing;
 
 create table if not exists public.profiles (
     id uuid primary key references auth.users(id) on delete cascade,
-    member_code text not null unique default ('LD-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))),
+    member_code text not null unique,
     username text not null check (username = lower(username) and username ~ '^[a-z0-9][a-z0-9_.-]{2,29}$'),
     full_name text not null,
     email text not null,
@@ -68,6 +68,9 @@ create index if not exists attendance_checked_in_at_idx on public.attendance (ch
 create index if not exists payments_member_created_at_idx on public.payments (member_id, created_at desc);
 create index if not exists profiles_role_idx on public.profiles (role);
 
+-- Sequence for sequential member codes: PMR-001-GYM, PMR-002-GYM ...
+create sequence if not exists public.member_code_seq start 1 increment 1;
+
 -- Keep member profile records in sync with new Supabase Auth users.
 create or replace function private.handle_new_auth_user()
 returns trigger
@@ -75,10 +78,14 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+    v_seq bigint;
 begin
-    insert into public.profiles (id, username, full_name, email, phone)
+    v_seq := nextval('public.member_code_seq');
+    insert into public.profiles (id, member_code, username, full_name, email, phone)
     values (
         new.id,
+        'PMR-' || lpad(v_seq::text, 3, '0') || '-GYM',
         coalesce(
             nullif(lower(btrim(new.raw_user_meta_data ->> 'username')), ''),
             'member-' || substr(replace(new.id::text, '-', ''), 1, 10)

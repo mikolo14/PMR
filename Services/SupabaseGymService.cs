@@ -104,7 +104,7 @@ public sealed class SupabaseGymService(HttpClient http)
             using var req = new HttpRequestMessage(HttpMethod.Get, lookupUrl);
             req.Headers.TryAddWithoutValidation("apikey", config.PublishableKey);
             req.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", config.PublishableKey);
+                new AuthenticationHeaderValue("Bearer", config.BearerKey);
 
             using var res = await http.SendAsync(req);
             if (res.IsSuccessStatusCode)
@@ -291,7 +291,7 @@ public sealed class SupabaseGymService(HttpClient http)
             : null;
         request.Headers.Authorization = new AuthenticationHeaderValue(
             "Bearer",
-            string.IsNullOrWhiteSpace(token) ? config.PublishableKey : token);
+            string.IsNullOrWhiteSpace(token) ? config.BearerKey : token);
 
         if (jsonBody is not null)
             request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
@@ -431,7 +431,12 @@ public sealed class SupabaseGymService(HttpClient http)
 
 public sealed record SupabaseConfiguration(
     [property: JsonPropertyName("ProjectUrl")]    string ProjectUrl,
-    [property: JsonPropertyName("PublishableKey")] string PublishableKey);
+    [property: JsonPropertyName("PublishableKey")] string PublishableKey,
+    [property: JsonPropertyName("AnonKey")]        string? AnonKey)
+{
+    // Use JWT anon key for Bearer auth if available, otherwise fall back to publishable key
+    public string BearerKey => string.IsNullOrWhiteSpace(AnonKey) ? PublishableKey : AnonKey;
+}
 
 public sealed record MemberProfile(
     [property: JsonPropertyName("id")]                  string       Id,

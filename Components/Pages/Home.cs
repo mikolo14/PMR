@@ -13,6 +13,10 @@ public sealed class Home : ComponentBase
     [Inject] private NavigationManager  Nav       { get; set; } = null!;
     [Inject] private MemberQrScanner    QrScanner { get; set; } = null!;
 
+    // ── Query string params (pre-filled from signup) ───────────────────
+    [SupplyParameterFromQuery(Name = "u")] private string? PrefillUsername { get; set; }
+    [SupplyParameterFromQuery(Name = "p")] private string? PrefillPassword { get; set; }
+
     // ── State ─────────────────────────────────────────────────────────
     private bool   isSignedIn;
     private bool   signingIn;
@@ -51,6 +55,13 @@ public sealed class Home : ComponentBase
     // ── Lifecycle ─────────────────────────────────────────────────────
     protected override async Task OnInitializedAsync()
     {
+        // Pre-fill credentials passed from signup page
+        if (!string.IsNullOrWhiteSpace(PrefillUsername))
+            loginUsername = PrefillUsername;
+        if (!string.IsNullOrWhiteSpace(PrefillPassword))
+            loginPassword = PrefillPassword;
+
+        // Restore session — if token is valid, go straight to dashboard
         try
         {
             currentMember = await Backend.GetCurrentMemberAsync();
@@ -60,7 +71,7 @@ public sealed class Home : ComponentBase
                 isSignedIn = true;
             }
         }
-        catch { /* not signed in — show auth screen */ }
+        catch { /* no valid session — show sign-in */ }
     }
 
     // ── Render ────────────────────────────────────────────────────────
@@ -668,52 +679,125 @@ public sealed class Home : ComponentBase
     // ── Profile section ───────────────────────────────────────────────
     private void RenderProfile(RenderTreeBuilder b, int seq)
     {
-        b.AddMarkupContent(seq,
-            "<div class=\"page-heading\">" +
-              "<span class=\"eyebrow\">ACCOUNT</span>" +
-              "<h1>My profile</h1>" +
-              "<p>Your membership details and contact info.</p>" +
-            "</div>");
+        // ── Hero card ─────────────────────────────────────────────────
+        b.OpenElement(seq, "div");
+        b.AddAttribute(seq+1, "class", "profile-page");
 
-        b.OpenElement(seq+1,"div");
-        b.AddAttribute(seq+2,"class","panel profile-panel");
+        // Avatar + name hero
+        b.OpenElement(seq+2, "div");
+        b.AddAttribute(seq+3, "class", "profile-hero");
 
-        // Banner
-        b.OpenElement(seq+3,"div");
-        b.AddAttribute(seq+4,"class","profile-banner");
-        b.OpenElement(seq+5,"div");
-        b.AddAttribute(seq+6,"class","profile-avatar");
-        b.AddContent(seq+7, Initials);
+        b.OpenElement(seq+4, "div");
+        b.AddAttribute(seq+5, "class", "profile-hero-avatar");
+        b.AddContent(seq+6, Initials);
         b.CloseElement();
-        b.OpenElement(seq+8,"div");
-        b.OpenElement(seq+9,"h2");
+
+        b.OpenElement(seq+7, "div");
+        b.AddAttribute(seq+8, "class", "profile-hero-info");
+        b.OpenElement(seq+9, "h1");
         b.AddContent(seq+10, DisplayName);
         b.CloseElement();
-        b.OpenElement(seq+11,"p");
-        b.AddContent(seq+12, $"{currentMember?.Username ?? ""} · PMR member");
+        b.OpenElement(seq+11, "span");
+        b.AddAttribute(seq+12, "class", "profile-hero-username");
+        b.AddContent(seq+13, "@" + (currentMember?.Username ?? ""));
         b.CloseElement();
+        b.OpenElement(seq+14, "div");
+        b.AddAttribute(seq+15, "class", "profile-hero-badges");
         if (IsMembershipActive)
-            b.AddMarkupContent(seq+13,"<span class=\"active-pill light\"><i></i> ACTIVE MEMBER</span>");
+            b.AddMarkupContent(seq+16, "<span class=\"profile-badge green\"><i></i> Active member</span>");
+        else
+            b.AddMarkupContent(seq+17, "<span class=\"profile-badge amber\">No active plan</span>");
+        b.OpenElement(seq+18, "span");
+        b.AddAttribute(seq+19, "class", "profile-badge grey");
+        b.AddContent(seq+20, currentMember?.MemberCode ?? "—");
         b.CloseElement();
-        b.CloseElement(); // profile-banner
+        b.CloseElement(); // badges
+        b.CloseElement(); // hero-info
+        b.CloseElement(); // profile-hero
 
-        // Fields grid
-        b.OpenElement(seq+14,"div");
-        b.AddAttribute(seq+15,"class","profile-fields");
-        ProfileField(b, seq+16, "FULL NAME",    currentMember?.FullName   ?? "—");
-        ProfileField(b, seq+22, "USERNAME",     currentMember?.Username   ?? "—");
-        ProfileField(b, seq+28, "EMAIL",        currentMember?.Email      ?? "—");
-        ProfileField(b, seq+34, "PHONE",        string.IsNullOrWhiteSpace(currentMember?.Phone) ? "Not provided" : currentMember!.Phone);
-        ProfileField(b, seq+40, "MEMBER ID",    currentMember?.MemberCode ?? "—");
-        ProfileField(b, seq+46, "PLAN",         PlanName);
+        // ── Info section ──────────────────────────────────────────────
+        b.OpenElement(seq+21, "div");
+        b.AddAttribute(seq+22, "class", "profile-section");
+        b.AddMarkupContent(seq+23, "<div class=\"profile-section-title\">Personal details</div>");
+
+        ProfileInfoRow(b, seq+24, "person",   "Full name",    currentMember?.FullName ?? "—");
+        ProfileInfoRow(b, seq+32, "at",        "Username",     currentMember?.Username ?? "—");
+        ProfileInfoRow(b, seq+40, "mail",      "Email",        currentMember?.Email    ?? "—");
+        ProfileInfoRow(b, seq+48, "phone",     "Phone",        string.IsNullOrWhiteSpace(currentMember?.Phone) ? "Not added" : currentMember!.Phone);
+
+        b.CloseElement(); // profile-section
+
+        // ── Membership section ────────────────────────────────────────
+        b.OpenElement(seq+56, "div");
+        b.AddAttribute(seq+57, "class", "profile-section");
+        b.AddMarkupContent(seq+58, "<div class=\"profile-section-title\">Membership</div>");
+
+        ProfileInfoRow(b, seq+59, "plan",    "Current plan",  PlanName);
+        ProfileInfoRow(b, seq+67, "renewal", "Renews on",     RenewalLabel);
+        ProfileInfoRow(b, seq+75, "id",      "Member ID",     currentMember?.MemberCode ?? "—");
+
+        b.CloseElement(); // profile-section
+
+        // ── Sign out section ──────────────────────────────────────────
+        b.OpenElement(seq+83, "div");
+        b.AddAttribute(seq+84, "class", "profile-signout-section");
+
+        b.OpenElement(seq+85, "div");
+        b.AddAttribute(seq+86, "class", "profile-signout-card");
+
+        b.OpenElement(seq+87, "div");
+        b.AddAttribute(seq+88, "class", "profile-signout-info");
+        b.OpenElement(seq+89, "b"); b.AddContent(seq+90, "Sign out"); b.CloseElement();
+        b.OpenElement(seq+91, "p"); b.AddContent(seq+92, "You'll be returned to the sign-in screen."); b.CloseElement();
         b.CloseElement();
 
-        b.OpenElement(seq+52,"p");
-        b.AddAttribute(seq+53,"class","profile-note");
-        b.AddContent(seq+54,"To update your contact details, contact your gym administrator.");
+        b.OpenElement(seq+93, "button");
+        b.AddAttribute(seq+94, "class", "profile-signout-btn");
+        b.AddAttribute<MouseEventArgs>(seq+95, "onclick",
+            EventCallback.Factory.Create<MouseEventArgs>(this, SignOutAsync));
+        b.AddMarkupContent(seq+96,
+            "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">" +
+              "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/>" +
+              "<polyline points=\"16 17 21 12 16 7\"/>" +
+              "<line x1=\"21\" y1=\"12\" x2=\"9\" y2=\"12\"/>" +
+            "</svg>" +
+            "Sign out");
+        b.CloseElement(); // button
+
+        b.CloseElement(); // signout-card
+        b.CloseElement(); // signout-section
+
+        b.OpenElement(seq+97, "footer");
+        b.AddAttribute(seq+98, "class", "profile-page-footer");
+        b.AddContent(seq+99, "© 2026 PMR · Here for your next milestone");
         b.CloseElement();
 
-        b.CloseElement(); // panel
+        b.CloseElement(); // profile-page
+    }
+
+    private void ProfileInfoRow(RenderTreeBuilder b, int seq,
+        string icon, string label, string value)
+    {
+        string svg = icon switch
+        {
+            "person"  => "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 20c0-4 3.6-7 8-7s8 3 8 7\"/></svg>",
+            "at"      => "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94\"/></svg>",
+            "mail"    => "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"2\" y=\"4\" width=\"20\" height=\"16\" rx=\"2\"/><path d=\"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7\"/></svg>",
+            "phone"   => "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z\"/></svg>",
+            "plan"    => "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z\"/></svg>",
+            "renewal" => "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\" ry=\"2\"/><line x1=\"16\" y1=\"2\" x2=\"16\" y2=\"6\"/><line x1=\"8\" y1=\"2\" x2=\"8\" y2=\"6\"/><line x1=\"3\" y1=\"10\" x2=\"21\" y2=\"10\"/></svg>",
+            _         => "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"2\" y=\"2\" width=\"20\" height=\"20\" rx=\"2\"/><path d=\"M12 8v8m-4-4h8\"/></svg>",
+        };
+
+        b.OpenElement(seq,   "div"); b.AddAttribute(seq+1, "class", "profile-info-row");
+        b.OpenElement(seq+2, "div"); b.AddAttribute(seq+3, "class", "profile-info-icon");
+        b.AddMarkupContent(seq+4, svg);
+        b.CloseElement();
+        b.OpenElement(seq+5, "div"); b.AddAttribute(seq+6, "class", "profile-info-text");
+        b.OpenElement(seq+7, "small"); b.AddContent(seq+8, label); b.CloseElement();
+        b.OpenElement(seq+9, "b");    b.AddContent(seq+10, value); b.CloseElement();
+        b.CloseElement();
+        b.CloseElement();
     }
 
     // ── Mobile bottom nav ─────────────────────────────────────────────
@@ -813,14 +897,6 @@ public sealed class Home : ComponentBase
         b.CloseElement();
     }
 
-    private void ProfileField(RenderTreeBuilder b, int seq, string label, string value)
-    {
-        b.OpenElement(seq,   "div");
-        b.OpenElement(seq+1, "small"); b.AddContent(seq+2, label); b.CloseElement();
-        b.OpenElement(seq+3, "b");     b.AddContent(seq+4, value); b.CloseElement();
-        b.CloseElement();
-    }
-
     // ── Auth logic ────────────────────────────────────────────────────
     private async Task SignInAsync()
     {
@@ -835,8 +911,15 @@ public sealed class Home : ComponentBase
             memberPayments = await Backend.GetPaymentsAsync(50);
             isSignedIn     = true;
         }
-        catch (Exception ex) { authError = ex.Message; }
-        finally { signingIn = false; }
+        catch (Exception ex)
+        {
+            authError = $"[{ex.GetType().Name}] {ex.Message}";
+        }
+        finally
+        {
+            signingIn = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task SignOutAsync()
@@ -849,6 +932,8 @@ public sealed class Home : ComponentBase
         loginPassword  = "";
         authError      = null;
         section        = "Overview";
+        // Navigate to clear query string params too
+        Nav.NavigateTo("/", forceLoad: false);
     }
 
     private async Task CheckInAsync()
